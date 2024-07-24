@@ -407,6 +407,7 @@ class SequenceGroupState:
 
     # torch.Generator used in seeded sampling
     generator: Optional = None  # type: ignore
+    wait_load: bool = False
 
 
 class SequenceGroup:

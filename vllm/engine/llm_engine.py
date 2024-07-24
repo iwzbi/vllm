@@ -646,6 +646,61 @@ class LLMEngine:
             trace_headers=trace_headers,
         )
 
+    def add_decode_request(
+        self, request_id: str, path: str, params: Union[SamplingParams, PoolingParams]
+    ):
+        import torch
+
+        # blocktable = torch.load('tensor.pt')
+        blocktable: torch.Tensor = []
+        # metadata = torch.load('data.pt')
+        # prompt = metadata.prompt
+
+        # Create input from metadata.
+        prompt = "you quit, i quit"
+        processed_inputs = self.process_model_inputs(
+            request_id=request_id, inputs=prompt
+        )
+
+        # Create the sequences.
+        block_size = self.cache_config.block_size
+        seq_id = next(self.seq_counter)
+        eos_token_id = self._get_eos_token_id()
+        seq = Sequence(
+            seq_id,
+            processed_inputs,
+            block_size,
+            eos_token_id,
+        )
+        # Create a SequenceGroup based on SamplingParams or PoolingParams
+        arrival_time = time.time()
+        if isinstance(params, SamplingParams):
+            seq_group = self._create_sequence_group_with_sampling(
+                request_id,
+                seq,
+                params,
+                arrival_time=arrival_time,
+            )
+        elif isinstance(params, PoolingParams):
+            seq_group = self._create_sequence_group_with_pooling(
+                request_id,
+                seq,
+                params,
+                arrival_time=arrival_time,
+            )
+        else:
+            raise ValueError("Either SamplingParams or PoolingParams must be provided.")
+
+        # New decode-only request must load kv cache from buffer first.
+        seq_group.state.wait_load = True
+
+        # Add the sequence group to the scheduler with least unfinished seqs.
+        costs = [
+            scheduler.get_num_unfinished_seq_groups() for scheduler in self.scheduler
+        ]
+        min_cost_scheduler = self.scheduler[costs.index(min(costs))]
+        min_cost_scheduler.add_seq_group(seq_group)
+
     def _create_sequence_group_with_sampling(
         self,
         request_id: str,

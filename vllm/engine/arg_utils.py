@@ -99,6 +99,7 @@ class EngineArgs:
     qlora_adapter_name_or_path: Optional[str] = None
 
     otlp_traces_endpoint: Optional[str] = None
+    instance_type: str = "decode_instance"
 
     def __post_init__(self):
         if self.tokenizer is None:
@@ -606,6 +607,14 @@ class EngineArgs:
             default=None,
             help='Target URL to which OpenTelemetry traces will be sent.')
 
+        parser.add_argument(
+            "--instance-type",
+            type=str,
+            default="mix_instance",
+            choices=["mix_instance", "prefill_instance", "decode_instance"],
+            help="instance type of this vllm application.",
+        )
+
         return parser
 
     @classmethod
@@ -709,13 +718,16 @@ class EngineArgs:
             max_num_seqs=self.max_num_seqs,
             max_model_len=model_config.max_model_len,
             use_v2_block_manager=self.use_v2_block_manager,
-            num_lookahead_slots=(self.num_lookahead_slots
-                                 if speculative_config is None else
-                                 speculative_config.num_lookahead_slots),
+            num_lookahead_slots=(
+                self.num_lookahead_slots
+                if speculative_config is None
+                else speculative_config.num_lookahead_slots
+            ),
             delay_factor=self.scheduler_delay_factor,
             enable_chunked_prefill=self.enable_chunked_prefill,
             embedding_mode=model_config.embedding_mode,
             preemption_mode=self.preemption_mode,
+            instance_type=self.instance_type,
         )
         lora_config = LoRAConfig(
             max_lora_rank=self.max_lora_rank,
