@@ -666,12 +666,19 @@ class LLMEngine:
         block_size = self.cache_config.block_size
         seq_id = next(self.seq_counter)
         eos_token_id = self._get_eos_token_id()
+
+        first_token_id = metadata.first_token_id
+        first_token_prob = metadata.first_token_prob
+
         seq = Sequence(
             seq_id,
             processed_inputs,
             block_size,
             eos_token_id,
         )
+        seq.data.update_num_computed_tokens(seq.data.get_len())
+        logger.info(f"new decode request, {seq.data.stage}")
+        seq.append_token_id(first_token_id, first_token_prob)
         # Create a SequenceGroup based on SamplingParams or PoolingParams
         arrival_time = time.time()
         if isinstance(params, SamplingParams):
@@ -934,10 +941,12 @@ class LLMEngine:
                 seq_group_metadata_list=seq_group_metadata_list,
                 blocks_to_swap_in=scheduler_outputs.blocks_to_swap_in,
                 blocks_to_swap_out=scheduler_outputs.blocks_to_swap_out,
+                blocks_to_laod_in=scheduler_outputs.blocks_to_load_in,
                 blocks_to_copy=scheduler_outputs.blocks_to_copy,
                 num_lookahead_slots=scheduler_outputs.num_lookahead_slots,
                 running_queue_size=scheduler_outputs.running_queue_size,
-                finished_requests_ids=finished_requests_ids)
+                finished_requests_ids=finished_requests_ids,
+            )
             output = self.model_executor.execute_model(
                 execute_model_req=execute_model_req)
         else:

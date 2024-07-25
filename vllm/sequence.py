@@ -973,6 +973,8 @@ class ExecuteModelRequest:
     seq_group_metadata_list: List[SequenceGroupMetadata]
     # Blocks to swap in. List of CPU -> GPU block number.
     blocks_to_swap_in: List[Tuple[int, int]] = field(default_factory=list)
+    # Blocks to swap in. List of CPU block number.
+    blocks_to_laod_in: List[int] = field(default_factory=list)
     # Blocks to swap out. List of GPU -> CPU block number.
     blocks_to_swap_out: List[Tuple[int, int]] = field(default_factory=list)
     # Blocks to copy. Source to dest block.
