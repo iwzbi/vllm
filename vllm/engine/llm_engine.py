@@ -647,7 +647,7 @@ class LLMEngine:
         )
 
     def add_decode_request(
-        self, request_id: str, path: str, params: Union[SamplingParams, PoolingParams]
+        self, request_id: str, params: Union[SamplingParams, PoolingParams]
     ):
         import torch
 
@@ -665,10 +665,12 @@ class LLMEngine:
         # Create the sequences.
         block_size = self.cache_config.block_size
         seq_id = next(self.seq_counter)
-        eos_token_id = self._get_eos_token_id()
+        eos_token_id = self._get_eos_token_id(lora_request=None)
 
-        first_token_id = metadata.first_token_id
-        first_token_prob = metadata.first_token_prob
+        # first_token_id = metadata.first_token_id
+        # first_token_prob = metadata.first_token_prob
+        first_token_id = 0
+        first_token_prob = 1
 
         seq = Sequence(
             seq_id,
@@ -677,8 +679,10 @@ class LLMEngine:
             eos_token_id,
         )
         seq.data.update_num_computed_tokens(seq.data.get_len())
-        logger.info(f"new decode request, {seq.data.stage}")
-        seq.append_token_id(first_token_id, first_token_prob)
+        from vllm.sequence import Logprob
+
+        logprob = {first_token_id: Logprob(1)}
+        seq.append_token_id(first_token_id, logprob)
         # Create a SequenceGroup based on SamplingParams or PoolingParams
         arrival_time = time.time()
         if isinstance(params, SamplingParams):
@@ -687,13 +691,11 @@ class LLMEngine:
                 seq,
                 params,
                 arrival_time=arrival_time,
+                lora_request=None,
             )
         elif isinstance(params, PoolingParams):
             seq_group = self._create_sequence_group_with_pooling(
-                request_id,
-                seq,
-                params,
-                arrival_time=arrival_time,
+                request_id, seq, params, arrival_time=arrival_time, lora_request=None
             )
         else:
             raise ValueError("Either SamplingParams or PoolingParams must be provided.")
@@ -706,7 +708,7 @@ class LLMEngine:
             scheduler.get_num_unfinished_seq_groups() for scheduler in self.scheduler
         ]
         min_cost_scheduler = self.scheduler[costs.index(min(costs))]
-        min_cost_scheduler.add_seq_group(seq_group)
+        min_cost_scheduler.add_decode_seq_group(seq_group)
 
     def _create_sequence_group_with_sampling(
         self,

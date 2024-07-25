@@ -237,6 +237,7 @@ class SchedulerSwappedInOutputs:
             prefill_seq_groups=[],
             blocks_to_swap_in=[],
             blocks_to_copy=[],
+            blocks_to_load_in=[],
             num_lookahead_slots=0,
             infeasible_seq_groups=[],
         )
@@ -348,7 +349,7 @@ class Scheduler:
         # Add sequence groups to the waiting queue.
         self.waiting.append(seq_group)
 
-    def add_decode_seq_group(self, seq_group: SequenceGroup, saved_tensor) -> None:
+    def add_decode_seq_group(self, seq_group: SequenceGroup) -> None:
         # Allocate new CPU kvcache block, set seq status sawapped
         from vllm.block import BlockTable, PhysicalTokenBlock
 
@@ -637,6 +638,7 @@ class Scheduler:
                 curr_loras.add(lora_int_id)
             swapped_queue.popleft()
             self._load_in(seq_group, blocks_to_load_in)
+            # After swap in, the CPU block is freed, but we still use them to load rec tensor first.
             self._swap_in(seq_group, blocks_to_swap_in)
             self._append_slots(seq_group, blocks_to_copy)
             is_prefill = seq_group.is_prefill()
@@ -1175,9 +1177,7 @@ class Scheduler:
         # This is because the engine assumes that a failure in model execution
         # will crash the vLLM instance / will not retry.
         for scheduled_seq_group in scheduler_outputs.scheduled_seq_groups:
-            self.block_manager.mark_blocks_as_computed(
-                scheduled_seq_group.seq_group)
-
+            self.block_manager.mark_blocks_as_computed(scheduled_seq_group.seq_group)
         return seq_group_metadata_list, scheduler_outputs
 
     def fork_seq(self, parent_seq: Sequence, child_seq: Sequence) -> None:
@@ -1292,11 +1292,11 @@ class Scheduler:
         seq_group: SequenceGroup,
         blocks_to_load_in: List[int],
     ) -> None:
-        block_numbers = []
         if seq_group.state.wait_load:
-            block_numbers = self.block_manager.get_block_table(seq_group)
+            for seq in seq_group.get_seqs(status=SequenceStatus.SWAPPED):
+                block_numbers = self.block_manager.get_block_table(seq)
+                blocks_to_load_in.extend(block_numbers)
             seq_group.state.wait_load = False
-        blocks_to_load_in.extend(block_numbers)
 
     def _swap_in(
         self,

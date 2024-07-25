@@ -88,6 +88,13 @@ class CacheEngine:
                             device=device))
         return kv_cache
 
+    def load_in(self, dst_blocks: torch.Tensor) -> None:
+        random_tensors = torch.load("/media/workspace/wenzheng/kvfile/kvcache.pth")
+        for block_number in dst_blocks:
+            for i in range(self.num_attention_layers):
+                self.cpu_cache[i][0][block_number] = random_tensors[i][0]
+                self.cpu_cache[i][1][block_number] = random_tensors[i][1]
+
     def swap_in(self, src_to_dst: torch.Tensor) -> None:
         for i in range(self.num_attention_layers):
             self.attn_backend.swap_blocks(self.cpu_cache[i], self.gpu_cache[i],

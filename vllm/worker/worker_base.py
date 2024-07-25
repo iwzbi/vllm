@@ -124,6 +124,7 @@ class WorkerInput:
     num_seq_groups: Optional[int] = None
     blocks_to_swap_in: Optional[torch.Tensor] = None
     blocks_to_swap_out: Optional[torch.Tensor] = None
+    blocks_to_load_in: Optional[torch.Tensor] = None
     blocks_to_copy: Optional[torch.Tensor] = None
     virtual_engine: int = 0
 
@@ -140,6 +141,7 @@ class WorkerInput:
             num_seq_groups=tensor_dict.pop("num_seq_groups"),
             blocks_to_swap_in=tensor_dict.pop("blocks_to_swap_in"),
             blocks_to_swap_out=tensor_dict.pop("blocks_to_swap_out"),
+            blocks_to_load_in=tensor_dict.pop("blocks_to_load_in"),
             blocks_to_copy=tensor_dict.pop("blocks_to_copy"),
             virtual_engine=tensor_dict["virtual_engine"],
         )
@@ -153,6 +155,7 @@ class WorkerInput:
             "num_seq_groups": self.num_seq_groups,
             "blocks_to_swap_in": self.blocks_to_swap_in,
             "blocks_to_swap_out": self.blocks_to_swap_out,
+            "blocks_to_load_in": self.blocks_to_load_in,
             "blocks_to_copy": self.blocks_to_copy,
             "virtual_engine": self.virtual_engine,
         }

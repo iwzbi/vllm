@@ -458,11 +458,10 @@ class LLM:
         outputs = self._run_engine(use_tqdm=use_tqdm)
         return LLMEngine.validate_outputs(outputs, EmbeddingRequestOutput)
 
-    def start_decode(self, path, params):
+    def start_decode(self, params):
         request_id = str(next(self.request_counter))
         self.llm_engine.add_decode_request(
             request_id,
-            path,
             params,
         )
 
