@@ -669,8 +669,8 @@ class LLMEngine:
 
         # first_token_id = metadata.first_token_id
         # first_token_prob = metadata.first_token_prob
-        first_token_id = 0
-        first_token_prob = 1
+        first_token_id = 13856
+        first_token_prob = None
 
         seq = Sequence(
             seq_id,
@@ -683,6 +683,8 @@ class LLMEngine:
 
         logprob = {first_token_id: Logprob(1)}
         seq.append_token_id(first_token_id, logprob)
+
+        self.detokenizer.decode_sequence_inplace(seq, params)
         # Create a SequenceGroup based on SamplingParams or PoolingParams
         arrival_time = time.time()
         if isinstance(params, SamplingParams):
