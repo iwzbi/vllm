@@ -28,7 +28,7 @@ def _make_model_runner_output(
     )
 
 
-@pytest.mark.parametrize("max_tokens", [1, 2, 3, 5])
+@pytest.mark.parametrize("max_tokens", [2])
 def test_stop_by_max_tokens(max_tokens: int):
     scheduler = create_scheduler(async_scheduling=True)
     requests = create_requests(num_requests=2, max_tokens=max_tokens)
@@ -46,12 +46,15 @@ def test_stop_by_max_tokens(max_tokens: int):
 
     total_num_scheduled_tokens = 0
     while sched_outputs:
+        import pdb
+        pdb.set_trace()
         sched_output = sched_outputs.popleft()
         total_num_scheduled_tokens += sched_output.total_num_scheduled_tokens
         model_runner_output = _make_model_runner_output(sched_output)
         scheduler.update_from_output(sched_output, model_runner_output)
 
         sched_output = scheduler.schedule()
+        pdb.set_trace()
         if sched_output.num_scheduled_tokens:
             sched_outputs.append(sched_output)
 

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import itertools
+from logging import log
 import time
 from collections import defaultdict
 from collections.abc import Iterable
@@ -202,6 +203,7 @@ class Scheduler(SchedulerInterface):
         )
         self.use_pp = self.parallel_config.pipeline_parallel_size > 1
         self.use_v2_model_runner = envs.VLLM_USE_V2_MODEL_RUNNER
+        self.schedule_step = 0
 
     def schedule(self) -> SchedulerOutput:
         # NOTE(woosuk) on the scheduling algorithm:
@@ -214,6 +216,9 @@ class Scheduler(SchedulerInterface):
         # num_tokens_with_spec. This is general enough to cover
         # chunked prefills, prefix caching, speculative decoding,
         # and the "jump decoding" optimization in the future.
+        logger.info("####################################")
+        logger.info(f"schedule-step: {self.schedule_step}")
+        self.schedule_step += 1
 
         scheduled_new_reqs: list[Request] = []
         scheduled_resumed_reqs: list[Request] = []
@@ -236,6 +241,7 @@ class Scheduler(SchedulerInterface):
         req_index = 0
         while req_index < len(self.running) and token_budget > 0:
             request = self.running[req_index]
+            logger.info(f"request: {request.request_id} num_output_placeholders: {request.num_output_placeholders}")
 
             if (
                 request.num_output_placeholders > 0
@@ -258,6 +264,9 @@ class Scheduler(SchedulerInterface):
                 + request.num_output_placeholders
                 - request.num_computed_tokens
             )
+            logger.info(f"request: {request.request_id} num_tokens_with_spec: {request.num_tokens_with_spec}")
+            logger.info(f"request: {request.request_id} num_computed_tokens: {request.num_computed_tokens}")
+            logger.info(f"request: {request.request_id} num_new_tokens: {num_new_tokens}")
             if 0 < self.scheduler_config.long_prefill_token_threshold < num_new_tokens:
                 num_new_tokens = self.scheduler_config.long_prefill_token_threshold
             num_new_tokens = min(num_new_tokens, token_budget)
@@ -628,6 +637,7 @@ class Scheduler(SchedulerInterface):
                 token_budget -= num_new_tokens
                 request.status = RequestStatus.RUNNING
                 request.num_computed_tokens = num_computed_tokens
+                logger.info(f"set num_computed_tokens: {num_computed_tokens} for new request {request.request_id}")
                 # Count the number of prefix cached tokens.
                 if request.num_cached_tokens < 0:
                     request.num_cached_tokens = num_computed_tokens
@@ -787,6 +797,8 @@ class Scheduler(SchedulerInterface):
         for req_id, num_scheduled_token in num_scheduled_tokens.items():
             request = self.requests[req_id]
             request.num_computed_tokens += num_scheduled_token
+            logger.info(f"add num_computed_tokens to {request.num_computed_tokens} for request: {req_id} immediately after schedule")
+            logger.info(f"but all token is {request.num_tokens}, now you can diff")
 
             # NOTE: _free_encoder_inputs relies on num_computed_tokens, which
             # may be updated again in _update_from_output for speculative

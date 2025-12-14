@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import torch
 
+from vllm.logger import init_logger
 from vllm.multimodal.inputs import MultiModalFeatureSpec
 from vllm.pooling_params import PoolingParams
 from vllm.sampling_params import SamplingParams
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     from vllm.lora.request import LoRARequest
     from vllm.v1.core.kv_cache_utils import BlockHash
 
+logger = init_logger(__name__)
 
 class Request:
     def __init__(
@@ -173,6 +175,7 @@ class Request:
 
         if self.get_hash_new_full_blocks is not None:
             self.block_hashes.extend(self.get_hash_new_full_blocks())
+        logger.info(f"append out token after running, request: {self.request_id} num_computed_tokens: {self.num_computed_tokens}, all tokens: {self.num_tokens}" )
 
     @property
     def use_structured_output(self) -> bool:

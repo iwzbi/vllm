@@ -32,6 +32,7 @@ class AsyncScheduler(Scheduler):
                 # The request will generate a new token plus num_spec_tokens
                 # in this scheduling step.
                 request.num_output_placeholders += 1 + cur_num_spec_tokens
+                logger.info(f"add num_output_placeholders to {request.num_output_placeholders} for request: {req_id} immediately after schedule")
                 # Add placeholders for the new tokens in spec_token_ids.
                 # We will update the actual spec token ids in the worker process.
                 request.spec_token_ids = [-1] * self.num_spec_tokens
@@ -48,6 +49,7 @@ class AsyncScheduler(Scheduler):
         if request.discard_latest_async_tokens:
             # If the request is force preempted in reset_prefix_cache, we
             # should discard the latest async token.
+            logger.info("discard_latest_async_tokens")
             request.discard_latest_async_tokens = False
             return [], False
 
@@ -57,6 +59,7 @@ class AsyncScheduler(Scheduler):
         )
 
         # Update the number of output placeholders.
+        logger.info(f"update placeholders form {request.num_output_placeholders} minus {len(new_token_ids)}")
         request.num_output_placeholders -= len(new_token_ids)
         assert request.num_output_placeholders >= 0
 

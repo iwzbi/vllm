@@ -425,11 +425,16 @@ class EngineCore:
             if not deferred_scheduler_output:
                 # Add this step's future to the queue.
                 batch_queue.appendleft((future, scheduler_output))
+                logger.info(f"append future {future} to batch_queue, now batch_queue size: {len(batch_queue)}")
+                logger.info(f"model_executed: {model_executed}")
+                logger.info(f"full batch_queue?: {len(batch_queue) == self.batch_queue_size}")
+                logger.info(f"oldest future done?: {batch_queue[-1][0].done()}")
                 if (
                     model_executed
                     and len(batch_queue) < self.batch_queue_size
                     and not batch_queue[-1][0].done()
                 ):
+                    logger.info("already launch a model run, step next!")
                     # Don't block on next worker response unless the queue is full
                     # or there are no more requests to schedule.
                     return None, True
@@ -442,12 +447,15 @@ class EngineCore:
 
         # Block until the next result is available.
         future, scheduler_output = batch_queue.pop()
+        logger.info(f"pop queue, now batch_queue size: {len(batch_queue)}")
+        logger.info(f"future: {future}")
         with self.log_error_detail(scheduler_output):
             model_output = future.result()
 
         # Before processing the model output, process any aborts that happened
         # during the model execution.
         self._process_aborts_queue()
+        logger.info(f"model_output: {model_output}")
         engine_core_outputs = self.scheduler.update_from_output(
             scheduler_output, model_output
         )

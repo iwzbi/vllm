@@ -896,6 +896,7 @@ class GPUModelRunner(
 
             # Update the cached states.
             req_state.num_computed_tokens = num_computed_tokens
+            logger.info(f"update request: {req_id} req_state num_computed_tokens: {num_computed_tokens} after scheduling")
 
             if not is_last_rank:
                 # When using PP, the scheduler sends the sampled tokens back,

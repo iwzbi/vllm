@@ -39,7 +39,7 @@ def mock_kv(matched_tokens: int, is_async: bool):
 
 
 def create_scheduler(
-    model: str = "facebook/opt-125m",
+    model: str = "/model/Qwen2.5-1.5B/",
     max_num_seqs: int = 16,
     max_num_batched_tokens: int = 8192,
     enable_chunked_prefill: bool = True,
